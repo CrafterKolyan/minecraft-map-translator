@@ -1,4 +1,4 @@
-# Minecraft Map Translator v.0.0.1
+# Minecraft Map Translator v0.0.1
 
 Currently implemented features:
 - Possibility to translate signs and command blocks in Overworld
