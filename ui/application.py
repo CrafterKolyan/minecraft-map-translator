@@ -114,3 +114,14 @@ class MapTranslatorMainWindow(QMainWindow):
                                     te[y.name].value = replacement[str(te[y.name])]
                         new_region.add_chunk(chunk)
                 new_region.save(filename)
+
+        self.table.setRowCount(0)
+        for value in set(replacement.values()):
+            row_n = self.table.rowCount()
+            self.table.insertRow(row_n)
+            item = QTableWidgetItem(value)
+            item.setFlags(item.flags() & ~Qt.ItemIsEditable)
+            self.table.setItem(row_n, 0, item)
+            item = QTableWidgetItem(value)
+            self.table.setItem(row_n, 1, item)
+
