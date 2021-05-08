@@ -23,6 +23,7 @@ class MapTranslatorMainWindow(QMainWindow):
     def __init__(self, parent=None):
         super().__init__(parent=parent)
         self.init_ui()
+        self.directory = None
 
     @classmethod
     def instance(cls):
@@ -52,54 +53,64 @@ class MapTranslatorMainWindow(QMainWindow):
             return
         self.directory = directory
 
+        directories = [self.directory, os.path.join(self.directory, 'DIM1'), os.path.join(self.directory, 'DIM-1')]
+        base_paths = [os.path.join(x, 'region') for x in directories]
+
         all_strings = set()
-        for x in os.listdir(base_path):
-            filename = os.path.join(base_path, x)
-            region = anvil.Region.from_file(filename)
-            for x in range(32):
-                for z in range(32):
-                    try:
-                        chunk = region.get_chunk(x, z)
-                    except anvil.errors.ChunkNotFound:
-                        continue
-                    for te in chunk.tile_entities:
-                        for y in te.tags:
-                            if isinstance(y, nbt.nbt.TAG_String) and y.name != "id":
-                                if str(te[y.name]) in all_strings:
-                                    continue
-                                all_strings.add(str(te[y.name]))
-                                row_n = self.table.rowCount()
-                                self.table.insertRow(row_n)
-                                item = QTableWidgetItem(str(te[y.name]))
-                                item.setFlags(item.flags() & ~Qt.ItemIsEditable)
-                                self.table.setItem(row_n, 0, item)
-                                item = QTableWidgetItem(str(te[y.name]))
-                                self.table.setItem(row_n, 1, item)
+        for base_path in base_paths:
+            if not os.path.exists(base_path):
+                continue
+            for x in os.listdir(base_path):
+                filename = os.path.join(base_path, x)
+                region = anvil.Region.from_file(filename)
+                for x in range(32):
+                    for z in range(32):
+                        try:
+                            chunk = region.get_chunk(x, z)
+                        except anvil.errors.ChunkNotFound:
+                            continue
+                        for te in chunk.tile_entities:
+                            for y in te.tags:
+                                if isinstance(y, nbt.nbt.TAG_String) and y.name != "id":
+                                    if str(te[y.name]) in all_strings:
+                                        continue
+                                    all_strings.add(str(te[y.name]))
+                                    row_n = self.table.rowCount()
+                                    self.table.insertRow(row_n)
+                                    item = QTableWidgetItem(str(te[y.name]))
+                                    item.setFlags(item.flags() & ~Qt.ItemIsEditable)
+                                    self.table.setItem(row_n, 0, item)
+                                    item = QTableWidgetItem(str(te[y.name]))
+                                    self.table.setItem(row_n, 1, item)
 
     def save(self):
-        if not hasattr(self, 'directory'):
+        if self.directory is None:
             return
 
         replacement = dict()
         for i in range(self.table.rowCount()):
             replacement[self.table.item(i, 0).text()] = self.table.item(i, 1).text()
 
-        base_path = os.path.join(self.directory, 'region')
-        for x in os.listdir(base_path):
-            filename = os.path.join(base_path, x)
-            region = anvil.Region.from_file(filename)
-            match = re.fullmatch(r"r\.(-?\d+)\.(-?\d+)\.mca", x)
+        directories = [self.directory, os.path.join(self.directory, 'DIM1'), os.path.join(self.directory, 'DIM-1')]
+        base_paths = [os.path.join(x, 'region') for x in directories]
+        for base_path in base_paths:
+            if not os.path.exists(base_path):
+                continue
+            for x in os.listdir(base_path):
+                filename = os.path.join(base_path, x)
+                region = anvil.Region.from_file(filename)
+                match = re.fullmatch(r"r\.(-?\d+)\.(-?\d+)\.mca", x)
 
-            new_region = anvil.EmptyRegion(int(match.group(1)), int(match.group(2)))
-            for x in range(32):
-                for z in range(32):
-                    try:
-                        chunk = region.get_chunk(x, z)
-                    except anvil.errors.ChunkNotFound:
-                        continue
-                    for te in chunk.tile_entities:
-                        for y in te.tags:
-                            if isinstance(y, nbt.nbt.TAG_String) and y.name != "id":
-                                te[y.name].value = replacement[str(te[y.name])]
-                    new_region.add_chunk(chunk)
-            new_region.save(filename)
+                new_region = anvil.EmptyRegion(int(match.group(1)), int(match.group(2)))
+                for x in range(32):
+                    for z in range(32):
+                        try:
+                            chunk = region.get_chunk(x, z)
+                        except anvil.errors.ChunkNotFound:
+                            continue
+                        for te in chunk.tile_entities:
+                            for y in te.tags:
+                                if isinstance(y, nbt.nbt.TAG_String) and y.name != "id":
+                                    te[y.name].value = replacement[str(te[y.name])]
+                        new_region.add_chunk(chunk)
+                new_region.save(filename)
